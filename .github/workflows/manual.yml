@@ -1,0 +1,89 @@
+name: Manual Test
+
+on:
+  workflow_dispatch:
+    inputs:
+      node_version:
+        description: 'Node.js version'
+        required: true
+        default: '20.x'
+        type: choice
+        options:
+          - '18.x'
+          - '20.x'
+          - '22.x'
+      run_coverage:
+        description: 'Run coverage report'
+        required: false
+        default: true
+        type: boolean
+      run_gas_report:
+        description: 'Run gas report'
+        required: false
+        default: true
+        type: boolean
+
+permissions:
+  contents: read
+
+jobs:
+  manual-test:
+    name: Manual Test Run
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js ${{ inputs.node_version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node_version }}
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run Solhint
+        run: npm run lint:sol
+
+      - name: Run Prettier Check
+        run: npm run prettier:check
+
+      - name: Compile contracts
+        run: npm run compile
+
+      - name: Run tests
+        run: npm test
+
+      - name: Generate coverage report
+        if: ${{ inputs.run_coverage }}
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: ${{ inputs.run_coverage }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+
+      - name: Generate gas report
+        if: ${{ inputs.run_gas_report }}
+        run: npm run test:gas
+
+      - name: Upload gas report
+        if: ${{ inputs.run_gas_report }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: gas-report
+          path: gas-report.txt
+
+      - name: Test Summary
+        run: |
+          echo "=== Test Summary ==="
+          echo "Node.js version: ${{ inputs.node_version }}"
+          echo "Coverage report: ${{ inputs.run_coverage }}"
+          echo "Gas report: ${{ inputs.run_gas_report }}"
+          echo "✅ All tests passed"

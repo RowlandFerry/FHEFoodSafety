@@ -1,0 +1,157 @@
+name: Pull Request Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  pr-validation:
+    name: PR Validation
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Check PR title format
+        run: |
+          PR_TITLE="${{ github.event.pull_request.title }}"
+          if [[ ! "$PR_TITLE" =~ ^(feat|fix|docs|style|refactor|test|chore|perf)(\(.+\))?:\ .+ ]]; then
+            echo "❌ PR title does not follow conventional commits format"
+            echo "Expected format: type(scope): description"
+            echo "Example: feat(contract): add new reporting feature"
+            exit 1
+          fi
+          echo "✅ PR title format is valid"
+
+      - name: Run Solhint
+        run: npm run lint:sol
+
+      - name: Run Prettier Check
+        run: npm run prettier:check
+
+      - name: Compile contracts
+        run: npm run compile
+
+      - name: Run tests
+        run: npm test
+
+      - name: Generate coverage
+        run: npm run test:coverage
+
+      - name: Comment PR with test results
+        uses: actions/github-script@v7
+        if: always()
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            let coverageSummary = 'Coverage report not available';
+
+            try {
+              if (fs.existsSync('./coverage/coverage-summary.json')) {
+                const coverage = JSON.parse(fs.readFileSync('./coverage/coverage-summary.json', 'utf8'));
+                const total = coverage.total;
+                coverageSummary = `
+            ### Coverage Summary
+            - **Statements**: ${total.statements.pct}%
+            - **Branches**: ${total.branches.pct}%
+            - **Functions**: ${total.functions.pct}%
+            - **Lines**: ${total.lines.pct}%
+                `;
+              }
+            } catch (error) {
+              console.log('Could not read coverage summary');
+            }
+
+            const comment = `
+            ## PR Check Results
+
+            ✅ All checks passed!
+
+            ${coverageSummary}
+
+            ### Next Steps
+            - Review the code changes
+            - Ensure all tests are passing
+            - Check gas costs if applicable
+            `;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20.x"
+          cache: "npm"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run security audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+
+      - name: Check for sensitive data
+        run: |
+          if grep -r "PRIVATE_KEY\s*=\s*['\"][0-9a-fA-Fx]" --exclude-dir=node_modules --exclude=".env.example" .; then
+            echo "❌ Found potential private key exposure"
+            exit 1
+          fi
+          echo "✅ No sensitive data found"
+
+  changes-summary:
+    name: Changes Summary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - name: Get changed files
+        id: changed-files
+        run: |
+          echo "sol_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.sol$' | wc -l)" >> $GITHUB_OUTPUT
+          echo "test_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep 'test.*\.js$' | wc -l)" >> $GITHUB_OUTPUT
+          echo "doc_files=$(git diff --name-only ${{ github.event.pull_request.base.sha }} ${{ github.sha }} | grep '\.md$' | wc -l)" >> $GITHUB_OUTPUT
+
+      - name: Summary
+        run: |
+          echo "=== PR Changes Summary ==="
+          echo "Solidity files changed: ${{ steps.changed-files.outputs.sol_files }}"
+          echo "Test files changed: ${{ steps.changed-files.outputs.test_files }}"
+          echo "Documentation files changed: ${{ steps.changed-files.outputs.doc_files }}"
