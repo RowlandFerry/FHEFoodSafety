@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anonymous Food Safety Reporting System</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ethers/5.7.2/ethers.umd.min.js"></script>
+    <script src="https://unpkg.com/fhevm@0.5.9/bundle/index.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+            min-height: 100vh;
+            color: #e4e4e4;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+
+        .card {
+            background: rgba(30, 30, 46, 0.95);
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(83, 170, 255, 0.3);
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #53aaff;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #2d3748;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            background: rgba(20, 20, 30, 0.7);
+            color: #e4e4e4;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #53aaff;
+            box-shadow: 0 0 10px rgba(83, 170, 255, 0.3);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #53aaff, #0084ff);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            width: 100%;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(83, 170, 255, 0.6);
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .btn-secondary {
+            background: linear-gradient(45deg, #6c5ce7, #a29bfe);
+            margin-top: 10px;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .status-submitted { background: #ffeaa7; color: #2d3436; }
+        .status-review { background: #fdcb6e; color: #2d3436; }
+        .status-investigating { background: #74b9ff; color: white; }
+        .status-resolved { background: #00b894; color: white; }
+        .status-closed { background: #636e72; color: white; }
+
+        .safety-level {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .safety-unknown { background: #b2bec3; color: #2d3436; }
+        .safety-safe { background: #00b894; color: white; }
+        .safety-warning { background: #fdcb6e; color: #2d3436; }
+        .safety-danger { background: #e84393; color: white; }
+        .safety-critical { background: #d63031; color: white; }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: rgba(30, 30, 46, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            border: 1px solid rgba(83, 170, 255, 0.2);
+        }
+
+        .stat-number {
+            font-size: 2em;
+            font-weight: bold;
+            color: #53aaff;
+        }
+
+        .stat-label {
+            color: #a0aec0;
+            font-size: 0.9em;
+        }
+
+        .report-item {
+            background: rgba(30, 30, 46, 0.7);
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            border-left: 4px solid #53aaff;
+        }
+
+        .error-message {
+            background: #ff7675;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .success-message {
+            background: #00b894;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .loading {
+            text-align: center;
+            color: #53aaff;
+            font-size: 1.1em;
+        }
+
+        .hidden { display: none; }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 10px;
+            padding: 5px;
+        }
+
+        .tab {
+            flex: 1;
+            padding: 12px;
+            text-align: center;
+            background: transparent;
+            border: none;
+            color: white;
+            cursor: pointer;
+            border-radius: 8px;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+
+        .tab.active {
+            background: rgba(255,255,255,0.2);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+            .header h1 {
+                font-size: 2em;
+            }
+            .card {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🛡️ Anonymous Food Safety Reporting System</h1>
+            <p>Protecting Privacy, Safeguarding Food Safety - Powered by Homomorphic Encryption</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchTab('submit')">Submit Report</button>
+            <button class="tab" onclick="switchTab('query')">Query Report</button>
+            <button class="tab" onclick="switchTab('stats')">Statistics</button>
+            <button class="tab" onclick="switchTab('manage')">Management</button>
+        </div>
+
+        <!-- Submit Report -->
+        <div id="submit-tab" class="tab-content active">
+            <div class="card">
+                <h2>📝 Submit Anonymous Report</h2>
+                <div id="submit-error" class="error-message hidden"></div>
+                <div id="submit-success" class="success-message hidden"></div>
+
+                <form id="reportForm">
+                    <div class="form-group">
+                        <label for="safetyLevel">Safety Level *</label>
+                        <select id="safetyLevel" required>
+                            <option value="">Select Safety Level</option>
+                            <option value="1">⚠️ Minor Risk</option>
+                            <option value="2">⚠️ Moderate Risk</option>
+                            <option value="3">🚨 Serious Risk</option>
+                            <option value="4">💀 Critical Danger</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="locationCode">Location Code *</label>
+                        <input type="number" id="locationCode" placeholder="e.g., 110101 (Administrative Area Code)" required>
+                        <small>Enter 6-digit administrative area code</small>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="foodType">Food Type *</label>
+                        <select id="foodType" required>
+                            <option value="">Select Food Type</option>
+                            <option value="1">🥩 Meat Products</option>
+                            <option value="2">🥛 Dairy Products</option>
+                            <option value="3">🍞 Bread & Pastries</option>
+                            <option value="4">🥫 Canned Foods</option>
+                            <option value="5">🍜 Instant Foods</option>
+                            <option value="6">🥗 Fresh Vegetables</option>
+                            <option value="7">🍎 Fruits</option>
+                            <option value="8">🍷 Beverages & Alcohol</option>
+                            <option value="9">🍯 Condiments & Spices</option>
+                            <option value="10">🍱 Other Foods</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="description">Problem Description *</label>
+                        <textarea id="description" placeholder="Describe the food safety issue in detail, including discovery time, location, specific circumstances, etc." required></textarea>
+                    </div>
+
+                    <button type="submit" class="btn" id="submitBtn">🚀 Submit Anonymous Report</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Query Report -->
+        <div id="query-tab" class="tab-content">
+            <div class="card">
+                <h2>🔍 Query Report Information</h2>
+                <div class="form-group">
+                    <label for="queryReportId">Report ID</label>
+                    <input type="number" id="queryReportId" placeholder="Enter Report ID">
+                    <button class="btn btn-secondary" onclick="queryReport()">Query Report</button>
+                </div>
+                <div id="reportDetails"></div>
+            </div>
+        </div>
+
+        <!-- Statistics -->
+        <div id="stats-tab" class="tab-content">
+            <div class="card">
+                <h2>📊 System Statistics</h2>
+                <div class="stats-grid" id="statsGrid">
+                    <!-- Statistics will be displayed here -->
+                </div>
+                <button class="btn btn-secondary" onclick="loadStats()">🔄 Refresh Statistics</button>
+            </div>
+
+            <div class="card">
+                <h2>🗺️ Regional Statistics</h2>
+                <div class="form-group">
+                    <label for="locationQuery">Region Code</label>
+                    <input type="number" id="locationQuery" placeholder="Enter 6-digit region code">
+                    <button class="btn btn-secondary" onclick="queryLocation()">Query Regional Statistics</button>
+                </div>
+                <div id="locationStats"></div>
+            </div>
+        </div>
+
+        <!-- Management Panel -->
+        <div id="manage-tab" class="tab-content">
+            <div class="card">
+                <h2>⚙️ Management Panel</h2>
+                <div id="manage-error" class="error-message hidden"></div>
+                <div id="manage-success" class="success-message hidden"></div>
+
+                <div class="grid">
+                    <div>
+                        <h3>👥 Investigator Management</h3>
+                        <div class="form-group">
+                            <label for="investigatorAddress">Investigator Address</label>
+                            <input type="text" id="investigatorAddress" placeholder="0x...">
+                        </div>
+                        <button class="btn btn-secondary" onclick="authorizeInvestigator()">Authorize Investigator</button>
+                        <button class="btn" style="background: #e84393; margin-top: 10px;" onclick="revokeInvestigator()">Revoke Permission</button>
+                    </div>
+
+                    <div>
+                        <h3>📋 Report Management</h3>
+                        <div class="form-group">
+                            <label for="manageReportId">Report ID</label>
+                            <input type="number" id="manageReportId" placeholder="Report ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="newStatus">New Status</label>
+                            <select id="newStatus">
+                                <option value="1">Under Review</option>
+                                <option value="2">Investigating</option>
+                                <option value="3">Resolved</option>
+                                <option value="4">Closed</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-secondary" onclick="updateReportStatus()">Update Status</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>🔬 Investigation Management</h2>
+                <div class="grid">
+                    <div>
+                        <h3>Start Investigation</h3>
+                        <div class="form-group">
+                            <label for="investigateReportId">Report ID</label>
+                            <input type="number" id="investigateReportId" placeholder="Report ID">
+                        </div>
+                        <button class="btn btn-secondary" onclick="startInvestigation()">Start Investigation</button>
+                    </div>
+
+                    <div>
+                        <h3>Complete Investigation</h3>
+                        <div class="form-group">
+                            <label for="completeReportId">Report ID</label>
+                            <input type="number" id="completeReportId" placeholder="Report ID">
+                        </div>
+                        <div class="form-group">
+                            <label for="finalLevel">Final Safety Level</label>
+                            <select id="finalLevel">
+                                <option value="1">Safe</option>
+                                <option value="2">Warning</option>
+                                <option value="3">Danger</option>
+                                <option value="4">Critical</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="findings">Investigation Findings</label>
+                            <textarea id="findings" placeholder="Investigation findings and conclusions"></textarea>
+                        </div>
+                        <button class="btn btn-secondary" onclick="completeInvestigation()">Complete Investigation</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Wallet Connection Status -->
+        <div class="card">
+            <div class="grid">
+                <div>
+                    <h3>🔗 Wallet Status</h3>
+                    <p id="walletStatus">Not Connected</p>
+                    <button class="btn btn-secondary" onclick="connectWallet()">Connect Wallet</button>
+                </div>
+                <div>
+                    <h3>🔧 Contract Status</h3>
+                    <p id="contractStatus">Not Connected</p>
+                    <button class="btn btn-secondary" onclick="initContract()">Initialize Contract</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Contract Configuration
+        const CONTRACT_ADDRESS = "0x09611Fc40177fe10D518C13F5c32fE8E1A29A656";
+        const CONTRACT_ABI = [
+            "function submitAnonymousReport(uint8 _safetyLevel, uint32 _locationCode, uint32 _foodType, string memory _description) external returns (uint32)",
+            "function getReportInfo(uint32 _reportId) external view returns (bool isProcessed, uint8 status, uint256 timestamp, uint256 lastUpdated, bool isValid)",
+            "function getInvestigationInfo(uint32 _reportId) external view returns (uint32 reportId, address investigator, uint8 finalSafetyLevel, string memory findings, bool isComplete, uint256 startTime, uint256 endTime)",
+            "function getLocationStats(uint32 _locationCode) external view returns (uint32 totalReports, uint32 resolvedReports, uint8 avgSafetyLevel, uint256 lastReportTime)",
+            "function getTotalStats() external view returns (uint32 total, uint32 submitted, uint32 underReview, uint32 investigating, uint32 resolved, uint32 closed)",
+            "function authorizeInvestigator(address _investigator) external",
+            "function revokeInvestigator(address _investigator) external",
+            "function updateReportStatus(uint32 _reportId, uint8 _status) external",
+            "function startInvestigation(uint32 _reportId) external",
+            "function completeInvestigation(uint32 _reportId, uint8 _finalLevel, string memory _findings) external",
+            "function totalReports() external view returns (uint32)",
+            "function owner() external view returns (address)",
+            "function regulator() external view returns (address)"
+        ];
+
+        let provider, signer, contract, fhevmInstance;
+        let userAddress = null;
+
+        // Tab Switching
+        function switchTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+
+            // Show selected tab
+            document.getElementById(tabName + '-tab').classList.add('active');
+            event.target.classList.add('active');
+        }
+
+        // Connect Wallet
+        async function connectWallet() {
+            try {
+                if (typeof window.ethereum !== 'undefined') {
+                    provider = new ethers.providers.Web3Provider(window.ethereum);
+                    await provider.send("eth_requestAccounts", []);
+                    signer = provider.getSigner();
+                    userAddress = await signer.getAddress();
+
+                    document.getElementById('walletStatus').innerHTML = `
+                        ✅ Connected<br>
+                        <small>${userAddress.substring(0, 10)}...${userAddress.substring(userAddress.length - 8)}</small>
+                    `;
+
+                    console.log('Wallet connected:', userAddress);
+
+                    // Initialize FHEVM
+                    await initFHEVM();
+
+                    // Automatically initialize contract
+                    await initContract();
+                } else {
+                    throw new Error('Please install MetaMask');
+                }
+            } catch (error) {
+                console.error('Wallet connection failed:', error);
+                showError('submit-error', 'Wallet connection failed: ' + error.message);
+            }
+        }
+
+        // Initialize FHEVM
+        async function initFHEVM() {
+            try {
+                fhevmInstance = await fhevm.createInstance({
+                    chainId: 8009,
+                    networkUrl: 'https://devnet.zama.ai/',
+                    gatewayUrl: 'https://gateway.zama.ai/',
+                });
+                console.log('FHEVM instance initialized successfully');
+            } catch (error) {
+                console.error('FHEVM initialization failed:', error);
+            }
+        }
+
+        // Initialize Contract
+        async function initContract() {
+            try {
+                if (!signer) {
+                    throw new Error('Please connect wallet first');
+                }
+
+                contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, signer);
+                document.getElementById('contractStatus').innerHTML = '✅ Connected<br><small>' + CONTRACT_ADDRESS.substring(0, 10) + '...</small>';
+                console.log('Contract initialized successfully');
+                return true;
+            } catch (error) {
+                console.error('Contract initialization failed:', error);
+                document.getElementById('contractStatus').textContent = '❌ Failed';
+                return false;
+            }
+        }
+
+        // Submit Report
+        document.getElementById('reportForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            // Check if wallet is connected
+            if (!userAddress) {
+                showError('submit-error', 'Please connect your wallet first');
+                return;
+            }
+
+            // Check if contract is initialized
+            if (!contract) {
+                showError('submit-error', 'Contract not initialized. Please click "Initialize Contract" button');
+                return;
+            }
+
+            const submitBtn = document.getElementById('submitBtn');
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Submitting...';
+
+            try {
+                const safetyLevel = parseInt(document.getElementById('safetyLevel').value);
+                const locationCode = parseInt(document.getElementById('locationCode').value);
+                const foodType = parseInt(document.getElementById('foodType').value);
+                const description = document.getElementById('description').value;
+
+                console.log('Submitting report:', { safetyLevel, locationCode, foodType, description });
+
+                // Call contract to submit report
+                const tx = await contract.submitAnonymousReport(
+                    safetyLevel,
+                    locationCode,
+                    foodType,
+                    description
+                );
+
+                showSuccess('submit-success', 'Report submitted! TX Hash: ' + tx.hash.substring(0, 20) + '...');
+
+                // Clear form
+                document.getElementById('reportForm').reset();
+
+                // Wait for transaction confirmation
+                await tx.wait();
+                showSuccess('submit-success', 'Report confirmed on-chain! ✅');
+
+            } catch (error) {
+                console.error('Report submission failed:', error);
+                let errorMsg = 'Report submission failed: ';
+                if (error.message.includes('user rejected')) {
+                    errorMsg += 'Transaction rejected by user';
+                } else if (error.message.includes('insufficient funds')) {
+                    errorMsg += 'Insufficient funds for gas';
+                } else {
+                    errorMsg += error.message;
+                }
+                showError('submit-error', errorMsg);
+            } finally {
+                submitBtn.disabled = false;
+                submitBtn.textContent = '🚀 Submit Anonymous Report';
+            }
+        });
+
+        // Query Report
+        async function queryReport() {
+            const reportId = document.getElementById('queryReportId').value;
+            if (!reportId || !contract) return;
+
+            try {
+                const reportInfo = await contract.getReportInfo(reportId);
+                const investigationInfo = await contract.getInvestigationInfo(reportId);
+
+                const statusNames = ['Submitted', 'Under Review', 'Investigating', 'Resolved', 'Closed'];
+                const safetyLevels = ['Unknown', 'Safe', 'Warning', 'Danger', 'Critical'];
+
+                document.getElementById('reportDetails').innerHTML = `
+                    <div class="report-item">
+                        <h4>Report #${reportId}</h4>
+                        <p><strong>Status:</strong> <span class="status-badge status-${getStatusClass(reportInfo.status)}">${statusNames[reportInfo.status]}</span></p>
+                        <p><strong>Submitted:</strong> ${new Date(reportInfo.timestamp * 1000).toLocaleString()}</p>
+                        <p><strong>Last Updated:</strong> ${new Date(reportInfo.lastUpdated * 1000).toLocaleString()}</p>
+                        <p><strong>Processed:</strong> ${reportInfo.isProcessed ? 'Yes' : 'No'}</p>
+                        ${investigationInfo.isComplete ? `
+                            <hr>
+                            <h5>Investigation Results</h5>
+                            <p><strong>Investigator:</strong> ${investigationInfo.investigator}</p>
+                            <p><strong>Final Rating:</strong> <span class="safety-level safety-${getSafetyClass(investigationInfo.finalSafetyLevel)}">${safetyLevels[investigationInfo.finalSafetyLevel]}</span></p>
+                            <p><strong>Findings:</strong> ${investigationInfo.findings}</p>
+                            <p><strong>Completed:</strong> ${new Date(investigationInfo.endTime * 1000).toLocaleString()}</p>
+                        ` : ''}
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Query report failed:', error);
+                document.getElementById('reportDetails').innerHTML = `<div class="error-message">Query failed: ${error.message}</div>`;
+            }
+        }
+
+        // Load Statistics
+        async function loadStats() {
+            if (!contract) return;
+
+            try {
+                const stats = await contract.getTotalStats();
+                document.getElementById('statsGrid').innerHTML = `
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.total}</div>
+                        <div class="stat-label">Total Reports</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.submitted}</div>
+                        <div class="stat-label">Pending Review</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.underReview}</div>
+                        <div class="stat-label">Under Review</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.investigating}</div>
+                        <div class="stat-label">Investigating</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.resolved}</div>
+                        <div class="stat-label">Resolved</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-number">${stats.closed}</div>
+                        <div class="stat-label">Closed</div>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Loading statistics failed:', error);
+            }
+        }
+
+        // Query Location Statistics
+        async function queryLocation() {
+            const locationCode = document.getElementById('locationQuery').value;
+            if (!locationCode || !contract) return;
+
+            try {
+                const stats = await contract.getLocationStats(locationCode);
+                const safetyLevels = ['Unknown', 'Safe', 'Warning', 'Danger', 'Critical'];
+
+                document.getElementById('locationStats').innerHTML = `
+                    <div class="report-item">
+                        <h4>Location Code: ${locationCode}</h4>
+                        <p><strong>Total Reports:</strong> ${stats.totalReports}</p>
+                        <p><strong>Resolved:</strong> ${stats.resolvedReports}</p>
+                        <p><strong>Avg Safety Level:</strong> <span class="safety-level safety-${getSafetyClass(stats.avgSafetyLevel)}">${safetyLevels[stats.avgSafetyLevel]}</span></p>
+                        <p><strong>Last Report:</strong> ${stats.lastReportTime > 0 ? new Date(stats.lastReportTime * 1000).toLocaleString() : 'None'}</p>
+                    </div>
+                `;
+            } catch (error) {
+                console.error('Query location failed:', error);
+                document.getElementById('locationStats').innerHTML = `<div class="error-message">Query failed: ${error.message}</div>`;
+            }
+        }
+
+        // Management Functions
+        async function authorizeInvestigator() {
+            const address = document.getElementById('investigatorAddress').value;
+            if (!address || !contract) return;
+
+            try {
+                const tx = await contract.authorizeInvestigator(address);
+                showSuccess('manage-success', 'Investigator authorized successfully!');
+                await tx.wait();
+            } catch (error) {
+                showError('manage-error', 'Authorization failed: ' + error.message);
+            }
+        }
+
+        async function revokeInvestigator() {
+            const address = document.getElementById('investigatorAddress').value;
+            if (!address || !contract) return;
+
+            try {
+                const tx = await contract.revokeInvestigator(address);
+                showSuccess('manage-success', 'Permission revoked successfully!');
+                await tx.wait();
+            } catch (error) {
+                showError('manage-error', 'Revocation failed: ' + error.message);
+            }
+        }
+
+        async function updateReportStatus() {
+            const reportId = document.getElementById('manageReportId').value;
+            const status = document.getElementById('newStatus').value;
+            if (!reportId || !status || !contract) return;
+
+            try {
+                const tx = await contract.updateReportStatus(reportId, status);
+                showSuccess('manage-success', 'Status updated successfully!');
+                await tx.wait();
+            } catch (error) {
+                showError('manage-error', 'Update failed: ' + error.message);
+            }
+        }
+
+        async function startInvestigation() {
+            const reportId = document.getElementById('investigateReportId').value;
+            if (!reportId || !contract) return;
+
+            try {
+                const tx = await contract.startInvestigation(reportId);
+                showSuccess('manage-success', 'Investigation started successfully!');
+                await tx.wait();
+            } catch (error) {
+                showError('manage-error', 'Start investigation failed: ' + error.message);
+            }
+        }
+
+        async function completeInvestigation() {
+            const reportId = document.getElementById('completeReportId').value;
+            const finalLevel = document.getElementById('finalLevel').value;
+            const findings = document.getElementById('findings').value;
+            if (!reportId || !finalLevel || !findings || !contract) return;
+
+            try {
+                const tx = await contract.completeInvestigation(reportId, finalLevel, findings);
+                showSuccess('manage-success', 'Investigation completed!');
+                await tx.wait();
+            } catch (error) {
+                showError('manage-error', 'Complete investigation failed: ' + error.message);
+            }
+        }
+
+        // Helper Functions
+        function showError(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+            setTimeout(() => element.classList.add('hidden'), 5000);
+        }
+
+        function showSuccess(elementId, message) {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.classList.remove('hidden');
+            setTimeout(() => element.classList.add('hidden'), 5000);
+        }
+
+        function getStatusClass(status) {
+            const classes = ['submitted', 'review', 'investigating', 'resolved', 'closed'];
+            return classes[status] || 'submitted';
+        }
+
+        function getSafetyClass(level) {
+            const classes = ['unknown', 'safe', 'warning', 'danger', 'critical'];
+            return classes[level] || 'unknown';
+        }
+
+        // Auto-connect wallet on page load
+        window.addEventListener('load', async function() {
+            if (typeof window.ethereum !== 'undefined') {
+                await connectWallet();
+                // Load stats if contract is initialized
+                if (contract) {
+                    try {
+                        await loadStats();
+                    } catch (error) {
+                        console.log('Could not load stats (contract may not be deployed):', error.message);
+                    }
+                }
+            }
+        });
+    </script>
+</body>
+</html>
