@@ -1,0 +1,14 @@
+node_modules/
+artifacts/
+cache/
+coverage/
+typechain/
+typechain-types/
+dist/
+build/
+*.log
+*.lock
+package-lock.json
+.env
+.env.*
+deployments/
