@@ -2,6 +2,12 @@
 
 A privacy-preserving food safety reporting platform powered by Fully Homomorphic Encryption (FHE) technology, enabling anonymous whistleblowing while maintaining data integrity and regulatory oversight.
 
+**Live Demo**: [https://fhe-food-safety.vercel.app/](https://fhe-food-safety.vercel.app/)
+
+**Demo Video**: [Watch the demonstration demo.mp4]
+
+🔗 **Smart Contract**: [Sepolia Testnet - 0x09611Fc40177fe10D518C13F5c32fE8E1A29A656](https://sepolia.etherscan.io/address/0x09611Fc40177fe10D518C13F5c32fE8E1A29A656)
+
 ## Overview
 
 The Food Safety Reporting System revolutionizes how food safety concerns are reported and investigated. By leveraging cutting-edge Fully Homomorphic Encryption from Zama's fhEVM, the platform ensures complete anonymity for whistleblowers while enabling authorized regulators to perform investigations and maintain food safety standards.
