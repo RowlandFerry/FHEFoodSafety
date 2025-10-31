@@ -12,6 +12,8 @@ A privacy-preserving food safety reporting platform powered by Fully Homomorphic
 
 The Food Safety Reporting System revolutionizes how food safety concerns are reported and investigated. By leveraging cutting-edge Fully Homomorphic Encryption from Zama's fhEVM, the platform ensures complete anonymity for whistleblowers while enabling authorized regulators to perform investigations and maintain food safety standards.
 
+**✨ NEW: React Frontend** - The platform now features a modern, production-ready React application built with TypeScript and Vite, providing an intuitive user interface for all stakeholders including whistleblowers, regulators, and investigators.
+
 ## Key Features
 
 ### For Whistleblowers
@@ -37,11 +39,28 @@ The Food Safety Reporting System revolutionizes how food safety concerns are rep
 
 ## Technology Stack
 
-- **Smart Contract Development**: Hardhat
+### Smart Contract Layer
+- **Smart Contract Development**: Hardhat ^2.26.4
 - **Blockchain**: Ethereum (Sepolia Testnet)
 - **Privacy Layer**: Zama fhEVM (Fully Homomorphic Encryption)
 - **Language**: Solidity ^0.8.24
-- **Testing**: Hardhat, Chai, Ethers.js
+- **FHE Library**: @fhevm/solidity ^0.8.0
+- **Testing**: Hardhat, Chai, Ethers.js ^6.15.0
+
+### Frontend Layer (New)
+- **Framework**: React ^18.3.1
+- **Language**: TypeScript ^5.5.3
+- **Build Tool**: Vite ^5.3.1
+- **FHE SDK**: @fhevm/sdk (workspace)
+- **Web3 Integration**: ethers.js ^6.15.0
+- **UI**: Modern React components with hooks
+
+### Development Tools
+- **Package Manager**: npm/yarn
+- **Environment**: Node.js v18+
+- **Type Checking**: TypeScript
+- **Module Bundler**: Vite (for React frontend)
+- **Smart Contract Tooling**: Hardhat ecosystem
 
 ## Quick Start
 
@@ -65,6 +84,33 @@ npm install
 cp .env.example .env
 
 # Edit .env and add your configuration
+```
+
+### Running the Application
+
+**Option 1: React Frontend (Recommended)**
+
+```bash
+# Start the React development server
+npm run dev
+
+# Or with Vite
+vite
+
+# Access at http://localhost:5173
+```
+
+**Option 2: Smart Contract Only**
+
+```bash
+# Compile contracts
+npx hardhat compile
+
+# Run tests
+npx hardhat test
+
+# Deploy to network
+npx hardhat run scripts/deploy.js --network sepolia
 ```
 
 ### Configuration
@@ -117,6 +163,26 @@ npx hardhat run scripts/verify.js --network sepolia
 
 ```
 .
+├── src/                      # React application source (NEW)
+│   ├── components/          # React components
+│   │   ├── App.tsx          # Main application component
+│   │   ├── SubmitReportTab.tsx
+│   │   ├── QueryReportTab.tsx
+│   │   ├── StatsTab.tsx
+│   │   ├── ManageTab.tsx
+│   │   └── WalletStatus.tsx
+│   ├── hooks/               # Custom React hooks
+│   │   ├── useContract.ts   # Contract interaction hook
+│   │   └── useFoodSafety.ts # Food safety operations hook
+│   ├── context/             # React context providers
+│   │   └── ContractContext.tsx
+│   ├── types/               # TypeScript type definitions
+│   │   └── contract.ts
+│   ├── constants/           # Application constants
+│   │   └── constants.ts     # Contract ABI & config
+│   ├── main.tsx            # React entry point
+│   ├── App.css             # Application styles
+│   └── vite-env.d.ts       # Vite type definitions
 ├── contracts/              # Solidity smart contracts
 │   └── AnonymousFoodSafety.sol
 ├── scripts/               # Deployment and interaction scripts
@@ -126,12 +192,46 @@ npx hardhat run scripts/verify.js --network sepolia
 │   └── simulate.js       # Full workflow simulation
 ├── test/                 # Test files
 │   └── FoodSafety.test.js
+├── index.html            # HTML entry point (Vite)
+├── vite.config.ts        # Vite configuration
+├── tsconfig.json         # TypeScript configuration
+├── tsconfig.node.json    # TypeScript Node configuration
 ├── hardhat.config.js     # Hardhat configuration
 ├── package.json          # Project dependencies
 ├── .env.example         # Environment variables template
 ├── DEPLOYMENT.md        # Detailed deployment guide
 └── README.md           # This file
 ```
+
+## Application Architecture
+
+### React Frontend (New)
+
+The application now features a modern React frontend built with TypeScript and Vite:
+
+**Key Features:**
+- **Component-Based Architecture**: Modular React components for each functionality
+- **Type Safety**: Full TypeScript support for better development experience
+- **Custom Hooks**: Reusable hooks for contract interactions and FHE operations
+- **Context API**: Global state management for contract and wallet connections
+- **Real-Time Updates**: Instant feedback on blockchain transactions
+- **Responsive Design**: Works seamlessly on desktop and mobile devices
+
+**Main Components:**
+- **WalletStatus**: Displays wallet connection status and network information
+- **SubmitReportTab**: Interface for submitting anonymous food safety reports
+- **QueryReportTab**: Query and view specific reports by ID
+- **StatsTab**: View system-wide and location-based statistics
+- **ManageTab**: Administrative functions for owners and investigators
+
+**Custom Hooks:**
+- **useContract**: Manages Web3 provider and contract instances
+- **useFoodSafety**: Encapsulates food safety report operations with FHE
+
+**Build & Development:**
+- Hot Module Replacement (HMR) with Vite for fast development
+- TypeScript compilation for type checking
+- Modern ES modules and tree-shaking for optimized bundles
 
 ## Smart Contract Architecture
 
@@ -220,7 +320,22 @@ console.log(`Resolved: ${stats.resolved}`);
 
 ## Scripts
 
-### Deployment Script
+### Frontend Scripts (New)
+
+```bash
+# Start React development server
+npm run dev
+
+# Build React application for production
+npm run build
+
+# Preview production build
+npm run preview
+```
+
+### Smart Contract Scripts
+
+#### Deployment Script
 
 ```bash
 npx hardhat run scripts/deploy.js --network sepolia
@@ -357,11 +472,15 @@ Individuals contribute to food safety databases privately
 - [x] Comprehensive testing
 - [x] Deployment scripts
 - [x] Documentation
-- [ ] Frontend interface
+- [x] React frontend interface ✨ **NEW**
+- [x] TypeScript integration ✨ **NEW**
+- [x] Modern build tooling (Vite) ✨ **NEW**
 - [ ] Mobile application
-- [ ] Analytics dashboard
+- [ ] Enhanced analytics dashboard
 - [ ] Multi-language support
 - [ ] Integration with regulatory systems
+- [ ] Progressive Web App (PWA) features
+- [ ] Real-time notifications
 
 ## Contributing
 

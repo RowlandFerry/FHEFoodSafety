@@ -1,0 +1,42 @@
+{
+  "name": "food-safety-reporter",
+  "version": "1.0.0",
+  "description": "Privacy-preserving food safety reporting platform using FHEVM SDK",
+  "private": true,
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview",
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "deploy:local": "hardhat run scripts/deploy.js --network localhost",
+    "deploy:sepolia": "hardhat run scripts/deploy.js --network sepolia"
+  },
+  "keywords": [
+    "fhevm",
+    "fhe",
+    "food-safety",
+    "privacy",
+    "blockchain",
+    "react"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@fhevm/sdk": "workspace:*",
+    "@fhevm/solidity": "^0.8.0",
+    "ethers": "^6.15.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-toolbox": "^6.1.0",
+    "@types/react": "^18.3.3",
+    "@types/react-dom": "^18.3.0",
+    "@vitejs/plugin-react": "^4.3.1",
+    "hardhat": "^2.26.4",
+    "dotenv": "^17.2.3",
+    "typescript": "^5.5.3",
+    "vite": "^5.3.1"
+  }
+}
